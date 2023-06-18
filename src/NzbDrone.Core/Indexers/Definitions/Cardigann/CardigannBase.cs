@@ -296,6 +296,7 @@ namespace NzbDrone.Core.Indexers.Definitions.Cardigann
                 object defaultValue = setting.Type switch
                 {
                     "select" => setting.Options.OrderBy(x => x.Key).Select(x => x.Key).ToList().IndexOf(setting.Default).ToString().ParseInt64() ?? 0,
+                    "multi-select" => setting.Defaults?.Select(d => setting.Options.OrderBy(x => x.Key).Select(x => x.Key).ToList().IndexOf(d).ToString().ParseInt64() ?? 0).ToArray() ?? Array.Empty<long>(),
                     _ => setting.Default
                 };
 
@@ -335,6 +336,23 @@ namespace NzbDrone.Core.Indexers.Definitions.Cardigann
                         }
 
                         variables[name] = selected.Key;
+                        break;
+                    case "multi-select":
+                        if (indexerLogging)
+                        {
+                            _logger.Trace($"Setting options: {setting.Options.ToJson()}");
+                        }
+
+                        var sortedMulti = setting.Options.OrderBy(x => x.Key).ToList();
+                        var values = value is ICollection collectionMulti ? collectionMulti.Cast<long>() : Array.Empty<long>();
+                        var selectedMulti = sortedMulti.Where((x, i) => values.Contains(i)).ToArray();
+
+                        if (indexerLogging)
+                        {
+                            _logger.Debug($"Selected option: {selectedMulti.ToJson()}");
+                        }
+
+                        variables[name] = selectedMulti.Select(x => x.Key).ToArray();
                         break;
                     case "info":
                         variables[name] = value;
